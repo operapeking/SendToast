@@ -1,22 +1,15 @@
 ﻿using Microsoft.Toolkit.Uwp.Notifications;
-using Newtonsoft.Json;
+using System.Net.Http.Json;
 
 class SendToast
 {
     struct Status
     {
-        public DateTime time;
-        public string ip;
-        public bool isComing;
+        public DateTime time { get; set; }
+        public string ip { get; set; }
+        public bool isComing { get; set; }
     }
 
-    static void Send(string title, string content)
-    {
-        new ToastContentBuilder()
-            .AddText(title)
-            .AddText(content)
-            .Show();
-    }
     static readonly HttpClient client = new();
     static async Task Main(string[] args)
     {
@@ -31,24 +24,26 @@ class SendToast
         {
             try
             {
-                string responseBody = await client.GetStringAsync(url);
-                var result = JsonConvert.DeserializeObject<Status>(responseBody);
+                var result = await client.GetFromJsonAsync<Status>(url);
                 if (result.isComing && gone != 2)
                 {
-                    Send("Dangerous", "Someone is coming! " + result.time.ToShortTimeString() + " from " + result.ip);
+                    new ToastContentBuilder().AddText("Wrong Answer")
+                        .AddText($"{result.time.ToShortTimeString()} from {result.ip}")
+                        .Show();
                     gone = 2;
                 }
                 else if (!result.isComing && gone != 1)
                 {
-                    Send("Safe", "No one is around. " + result.time.ToShortTimeString() + " from " + result.ip);
+                    new ToastContentBuilder().AddText("Accepted")
+                        .AddText($"{result.time.ToShortTimeString()} from {result.ip}")
+                        .Show();
                     gone = 1;
                 }
-                Thread.Sleep(100);
+                Thread.Sleep(50);
             }
-            catch (HttpRequestException e)
+            catch (Exception ex)
             {
-                Console.WriteLine("\nException Caught!");
-                Console.WriteLine("Message :{0} ", e.Message);
+                Console.WriteLine(ex.Message);
             }
         }
     }
