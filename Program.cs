@@ -8,6 +8,7 @@ class SendToast
         public DateTime time { get; set; }
         public string ip { get; set; }
         public bool isComing { get; set; }
+        public string who { get; set; }
     }
 
     static readonly HttpClient client = new();
@@ -19,27 +20,28 @@ class SendToast
             return;
         }
         string url = args[0] + "/query";
-        int gone = 0;
+        Status last = new();
         for (; ; )
         {
+            Thread.Sleep(100);
             try
             {
-                var result = await client.GetFromJsonAsync<Status>(url);
-                if (result.isComing && gone != 2)
+                var now = await client.GetFromJsonAsync<Status>(url);
+                if (now.isComing == last.isComing && now.who == last.who)
+                    continue;
+                if (now.isComing)
                 {
                     new ToastContentBuilder().AddText("Wrong Answer")
-                        .AddText($"{result.time.ToShortTimeString()} from {result.ip}")
+                        .AddText($"{now.who} {now.time.ToShortTimeString()} from {now.ip}")
                         .Show();
-                    gone = 2;
                 }
-                else if (!result.isComing && gone != 1)
+                else
                 {
                     new ToastContentBuilder().AddText("Accepted")
-                        .AddText($"{result.time.ToShortTimeString()} from {result.ip}")
+                        .AddText($"{now.who} {now.time.ToShortTimeString()} from {now.ip}")
                         .Show();
-                    gone = 1;
                 }
-                Thread.Sleep(50);
+                last = now;
             }
             catch (Exception ex)
             {
